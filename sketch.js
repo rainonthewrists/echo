@@ -1,23 +1,23 @@
 let speechRec;
 let phrases = [];
-const recognitionDuration = 7000; // 7 секунд для каждого отрезка распознавания
+const recognitionDuration = 7000;
 const fadeDuration = 50000;
-const removalFadeDuration = 5000; // Время исчезновения старых фраз (5 секунд)
+const removalFadeDuration = 5000;
 let frameSize = 100;
-let occupiedAreas = []; // Массив, отслеживающий занятые области
+let occupiedAreas = [];
 let recognitionTimeout;
 let silenceTimeout;
-let scenarioTimeout; // Таймер для случайных сценариев
-let currentScenario = 0; // Для переключения между сценариями
+let scenarioTimeout;
+let currentScenario = 0;
 
 function setup() {
   createCanvas(1920, 1080);
   background(0);
   
   speechRec = new p5.SpeechRec('ru-RU', gotSpeech);
-  speechRec.interimResults = false; // Окончательные результаты, без промежуточных
-  speechRec.continuous = true; // Микрофон работает постоянно
-  speechRec.onEnd = handleEndOfRecognition; // Указываем, что делать, когда распознавание завершено
+  speechRec.interimResults = false;
+  speechRec.continuous = true;
+  speechRec.onEnd = handleEndOfRecognition;
 
   startRecognition();
   textSize(27);
@@ -38,36 +38,32 @@ function draw() {
     }
     
     // Ограничение на три строки
-    const linesToDisplay = phrase.lines.slice(0, 7); // Выбираем только первые семь строк
+    const linesToDisplay = phrase.lines.slice(0, 7);
     
     for (let j = 0; j < linesToDisplay.length; j++) {
       text(linesToDisplay[j].toLowerCase(), phrase.x, phrase.y + j * 30);
     }
-    
-    // Если количество фраз больше 30, начинаем уменьшать прозрачность у старых
+
     if (phrases.length > 30 && i === 0) {
-      phrase.alpha -= 255 / (removalFadeDuration / 1000 * frameRate()); // Плавное затухание за 5 секунд
+      phrase.alpha -= 255 / (removalFadeDuration / 1000 * frameRate());
       if (phrase.alpha <= 0) {
-        // Удаляем фразу из массива фраз и освобождаем занятую область
-        occupiedAreas.splice(phrases[i].occupiedAreaIndex, 1); // Удаляем занятую область
-        phrases.splice(i, 1); // Удаляем фразу из массива
-        continue; // Переходим к следующей фразе, так как текущая была удалена
+        occupiedAreas.splice(phrases[i].occupiedAreaIndex, 1);
+        phrases.splice(i, 1);
+        continue;
       }
     } else {
-      // Обычное затухание для всех фраз
       phrase.alpha -= 178 / (fadeDuration / 1000 * frameRate());
       if (phrase.alpha <= 25) {
-        phrase.alpha = 25; // Минимальная прозрачность
+        phrase.alpha = 25;
       }
     }
   }
 }
 
 async function gotSpeech() {
-  // Очищаем таймеры
   clearTimeout(silenceTimeout);
   clearTimeout(scenarioTimeout);
-  currentScenario = 0; // Сброс сценария при распознавании речи
+  currentScenario = 0;
 
   if (speechRec.resultValue) {
     let words = speechRec.resultString.split(' ');
@@ -79,7 +75,7 @@ async function gotSpeech() {
       y: 0,
       alpha: 255,
       type: 'speech',
-      occupiedAreaIndex: null // Храним индекс занятой области
+      occupiedAreaIndex: null
     };
 
     findValidPosition(phraseObject);
@@ -96,34 +92,30 @@ async function gotSpeech() {
         y: 0,
         alpha: 255,
         type: 'generated',
-        occupiedAreaIndex: null // Храним индекс занятой области
+        occupiedAreaIndex: null
       };
 
       findValidPosition(generatedPhraseObject);
       phrases.push(generatedPhraseObject);
     }
-
-    // Запускаем таймер молчания
     silenceTimeout = setTimeout(() => {
       startSilenceTimeout();
-    }, 30000); // 30 секунд молчания
+    }, 30000);
   }
 }
 
 function startSilenceTimeout() {
-  // Запускаем таймер для случайных сценариев
-  scenarioTimeout = setInterval(generateRandomScenario, 10000); // Генерируем случайный сценарий каждые 10 секунд
+  scenarioTimeout = setInterval(generateRandomScenario, 10000);
 }
 
 function generateRandomScenario() {
   if (currentScenario === 0) {
-    // Первый сценарий: символы '01)' рандомно
     let generatedLines = [];
-    let lineCount = Math.floor(Math.random() * 10) + 1; // От 1 до 10 строк
+    let lineCount = Math.floor(Math.random() * 10) + 1;
 
     for (let i = 0; i < lineCount; i++) {
-      let repeatCount = Math.floor(Math.random() * 4) + 1; // От 1 до 4 повторов
-      generatedLines.push('01) '.repeat(repeatCount).trim()); // Создаём строку с повторениями
+      let repeatCount = Math.floor(Math.random() * 4) + 1;
+      generatedLines.push('01) '.repeat(repeatCount).trim());
     }
 
     let phraseObject = {
@@ -132,14 +124,13 @@ function generateRandomScenario() {
       y: 0,
       alpha: 255,
       type: 'generated',
-      occupiedAreaIndex: null // Храним индекс занятой области
+      occupiedAreaIndex: null
     };
 
     findValidPosition(phraseObject);
     phrases.push(phraseObject);
-    currentScenario = 1; // Переход к следующему сценарию
+    currentScenario = 1;
   } else if (currentScenario === 1) {
-    // Второй сценарий: строки из перечисленных
     const lines = [
       'let data = await',
       '(!response.ok)',
@@ -156,20 +147,18 @@ function generateRandomScenario() {
     ];
 
     let randomLine = random(lines);
-
-    // Изменение: разбиение строки на несколько строк
     let phraseObject = {
-      lines: splitIntoLines(randomLine.split(' ')),  // Разбиваем строку на строки
+      lines: splitIntoLines(randomLine.split(' ')),
       x: 0,
       y: 0,
       alpha: 255,
       type: 'generated',
-      occupiedAreaIndex: null // Храним индекс занятой области
+      occupiedAreaIndex: null
     };
 
     findValidPosition(phraseObject);
     phrases.push(phraseObject);
-    currentScenario = 0; // Переход к следующему сценарию
+    currentScenario = 0;
   }
 }
 
@@ -185,7 +174,6 @@ function findValidPosition(phraseObject) {
       phraseObject.x = x;
       phraseObject.y = y;
 
-      // Занимаем область и сохраняем её индекс
       let area = { x, y, height: phraseObject.lines.length * 30 };
       occupiedAreas.push(area);
       phraseObject.occupiedAreaIndex = occupiedAreas.length - 1;
@@ -222,13 +210,10 @@ function splitIntoLines(words) {
 }
 
 function startRecognition() {
-  // Очищаем таймер
   clearTimeout(recognitionTimeout);
   
-  // Запускаем распознавание речи
   speechRec.start();
 
-  // Принудительно завершаем через 7 секунд
   recognitionTimeout = setTimeout(() => {
     speechRec.stop();
   }, recognitionDuration);
@@ -241,9 +226,8 @@ function handleEndOfRecognition() {
 function keyPressed() {
   if (key === 'm' || key === 'M') {
     console.log('Перезапуск микрофона и распознавания речи');
-    startRecognition();  // Перезапуск распознавания речи
+    startRecognition();
   }
-  // Переключение на полноэкранный режим по нажатию клавиши 'f'
   if (key === 'f' || key === 'F') {
     toggleFullscreen();
   }
@@ -255,7 +239,7 @@ function toggleFullscreen() {
 }
 
 async function requestPoem(speech) {
-  const apiKey = '3pqdV38WnPZ75Qo0aqhIKdDH4bpsSNV3'; // Замените на ваш API-ключ
+  const apiKey = '3pqdV38WnPZ75Qo0aqhIKdDH4bpsSNV3';
   const apiUrl = 'https://api.mistral.ai/v1/chat/completions';
 
   const promptText = `Ответь одной поэтической строчкой. Поэзия на тему: "${speech}"`;
